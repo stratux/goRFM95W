@@ -8,14 +8,24 @@ import (
 	"time"
 )
 
+type RFM95W_Message struct {
+	Buf      []byte
+	RSSI     int
+	SNR      int
+	Received time.Time
+}
+
 type RFM95W struct {
-	SPI  *spi.Device
-	mode int
-	freq uint64 // Hz
-	bw   int    // Hz
-	sf   int
-	cr   int
-	pr   int
+	SPI           *spi.Device
+	mode          int
+	freq          uint64 // Hz
+	bw            int    // Hz
+	sf            int
+	cr            int
+	pr            int
+	interruptChan chan int
+	RecvBuf       []RFM95W_Message // This is constantly being filled up as messages are received.
+	currentMode   byte
 }
 
 const (
@@ -76,6 +86,9 @@ func New() (*RFM95W, error) {
 
 func (r *RFM95W) SetMode(mode byte) error {
 	_, err := r.SetRegister(0x01, mode)
+	if err != nil {
+		r.currentMOde = mode
+	}
 	return err
 }
 
@@ -105,7 +118,8 @@ func (r *RFM95W) init() error {
 		return errors.New("Init failed - couldn't set mode on module.")
 	}
 
-	//TODO: WiringPi interrupts.
+	// Set up the WiringPi interrupt for DIO0.
+	r.interruptChan = WiringPiISR(RF95W_DIO0_INT_PIN, rpi.INT_EDGE_RISING)
 
 	// Set base addresses of the FIFO buffer in both TX and RX cases to zero.
 	r.SetRegister(0x0E, 0x00)
@@ -254,4 +268,46 @@ func (r *RFM95W) SetFrequency(freq uint64) error {
 func (r *RFM95W) SetTXPower() error {
 	_, err := r.SetRegister(0x09, 0x8F)
 	return err
+}
+
+/*
+	Send().
+	 Sends a single message. Stops the receive thread and switches to TX mode until the message is sent.
+*/
+
+func (r *RFM95W) Send(msg []byte) error {
+	if len(msg) > 255 {
+		return errors.New("Message too long.")
+	}
+
+	//FIXME: Stop the receive thread.
+
+	r.SetMode(RF95W_MODE_STDBY)
+
+	// Set the FIFO address pointer to the start.
+	_, err := r.SetRegister(0x0D, 0x00)
+	if err != nil {
+		return err
+	}
+
+	// Write the message into the FIFO buffer.
+	_, err = r.SetBytes(0x00, msg)
+	if err != nil {
+		return err
+	}
+
+	// Change DIOx register mapping so that DIO0 interrupts when transmission has finished.
+	_, err = r.SetRegister(0x40, 0x40)
+	if err != nil {
+		return err
+	}
+
+	// Begin transmitting.
+	err = r.SetMode(RF95W_MODE_TX)
+	return err
+}
+
+//TODO
+func (r *RFM95W) queueHandler() {
+
 }
