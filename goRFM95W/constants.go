@@ -10,4 +10,6 @@ const (
 	RF95W_MODE_RXCONTINUOUS = 0x05
 	RF95W_MODE_RXSINGLE     = 0x06
 	RF95W_MODE_CAD          = 0x07
+
+	RF95W_FREQ_STEP = 32000000.0 / 524288.0 // 32 MHz oscillator, 2^19 bits. ~61 Hz.
 )

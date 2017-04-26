@@ -146,9 +146,11 @@ func (r *RFM95W) SetPreambleLength(pr int) error {
 
 }
 
-//TODO
 func (r *RFM95W) SetFrequency(freq uint64) error {
-
+	steps := uint32(float64(freq) / RF95W_FREQ_STEP)
+	r.SetRegister(0x06, (steps&0xFF0000)>>16)
+	r.SetRegister(0x07, (steps&0x00FF00)>>8)
+	r.SetRegister(0x08, (steps & 0x0000FF))
 }
 
 //TODO
