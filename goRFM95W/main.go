@@ -2,29 +2,28 @@ package goRFM95W
 
 import (
 	"errors"
+	"fmt"
 	"github.com/cyoung/rpi"
 	"golang.org/x/exp/io/spi"
 	"time"
 )
 
 type RFM95W struct {
-	SPI   *spi.Device
-	mode  int
-	freq  uint64 // Hz
-	bw    int    // kHz
-	sf    int
-	cr    int
-	pr    int
-	txpwr int
+	SPI  *spi.Device
+	mode int
+	freq uint64 // Hz
+	bw   int    // Hz
+	sf   int
+	cr   int
+	pr   int
 }
 
 const (
-	RF95W_DEFAULT_FREQ  = 915000000 // Hz
-	RF95W_DEFAULT_BW    = 500       // kHz
-	RF95W_DEFAULT_SF    = 12
-	RF95W_DEFAULT_CR    = 4
-	RF95W_DEFAULT_PR    = 8
-	RF85W_DEFAULT_TXPWR = 13 // dBm
+	RF95W_DEFAULT_FREQ = 915000000 // Hz
+	RF95W_DEFAULT_BW   = 500000    // Hz
+	RF95W_DEFAULT_SF   = 12
+	RF95W_DEFAULT_CR   = 4
+	RF95W_DEFAULT_PR   = 8
 
 	// Hardware config.
 	RF95W_CS_PIN       = rpi.PIN_GPIO_10
@@ -121,39 +120,138 @@ func (r *RFM95W) init() error {
 
 	r.SetPreambleLength(r.pr)
 	r.SetFrequency(r.freq)
-	r.SetTXPower(r.txpwr)
+	r.SetTXPower()
 
 	return nil
 }
 
-//TODO
+/*
+	SetBandwidth().
+	 Sets the total bandwidth to use in the transmission.
+*/
+
+// bandwidth (Hz) -> setting.
+var RFM95W_Bandwidths = map[int]byte{
+	7800:   0x0,
+	10400:  0x1,
+	15600:  0x2,
+	20800:  0x3,
+	31250:  0x4,
+	41700:  0x5,
+	62500:  0x6,
+	125000: 0x7,
+	500000: 0x8,
+}
+
 func (r *RFM95W) SetBandwidth(bw int) error {
-
+	if b, ok := RFM95W_Bandwidths[bw]; !ok {
+		return errors.New("Invalid bandwidth requested.")
+	}
+	// Get initial value.
+	val, err := r.GetRegister(0x1D)
+	if err != nil {
+		return err
+	}
+	// Set only the bandwidth portion.
+	new_val := (val & 0x0F) | (b << 4)
+	fmt.Printf("SetBandwidth(): %02x -> %02x\n", val, new_val)
+	_, err = r.SetRegister(0x1D, new_val)
+	return err
 }
 
-//TODO
-func (r *RFM95W) SetSpreadingFactor(sf int) error {
+/*
+	SetCodingRate().
+	 Sets the coding rate. Valid values are 5 (4/5), 6 (4/6), 7 (4/7), 8 (4/8).
+*/
 
-}
-
-//TODO
 func (r *RFM95W) SetCodingRate(cr int) error {
-
+	if cr < 5 || cr > 8 {
+		return errors.New("Invalid coding rate requested.")
+	}
+	b := byte(cr - 4) // 5 = 0x1, 6 = 0x2, 7 = 0x3, 8 = 0x4
+	// Get initial value.
+	val, err := r.GetRegister(0x1D)
+	if err != nil {
+		return err
+	}
+	// Set only the coding rate portion.
+	new_val := (val & 0xF1) | (b << 1)
+	fmt.Printf("SetCodingRate(): %02x -> %02x\n", val, new_val)
+	_, err := r.SetRegister(0x1D, new_val)
+	return err
 }
 
-//TODO
-func (r *RFM95W) SetPreambleLength(pr int) error {
+/*
+	SetExplicitHeaderMode().
+	 True or false - include explicit header.
+	 Currently always setting "false" on init since no other header handling is implemented.
+*/
 
+func (r *RFM95W) SetExplicitHeaderMode(wantHeader bool) error {
+	// Get initial value.
+	val, err := r.GetRegister(0x1D)
+	if err != nil {
+		return err
+	}
+	var b byte
+	if !wantHeader {
+		b = 0x1
+	}
+	// Set only the header portion.
+	new_val := (val & 0xFE) | b
+	fmt.Printf("SetExplicitHeaderMode(): %02x -> %02x\n", val, new_val)
+	_, err := r.SetRegister(0x1D, new_val)
+	return err
+}
+
+/*
+	SetSpreadingFactor().
+	 Sets the spreading factor. Valid values are 6, 7, 8, 9, 10, 11, 12.
+*/
+
+func (r *RFM95W) SetSpreadingFactor(sf int) error {
+	if sf < 6 || sf > 12 {
+		return errors.New("Invalid spreading factor requested.")
+	}
+	b := byte(sf)
+	// Get initial value.
+	val, err := r.GetRegister(0x1E)
+	if err != nil {
+		return err
+	}
+	// Set only the spreading factor portion.
+	new_val := (val & 0x0F) | (b << 4)
+	fmt.Printf("SetSpreadingFactor(): %02x -> %02x\n", val, new_val)
+	_, err := r.SetRegister(0x1E, new_val)
+	return err
+}
+
+/*
+	SetPreambleLength().
+	 Sets the preamble length, from 6-65535.
+	 Default value is 8.
+*/
+func (r *RFM95W) SetPreambleLength(pr int) error {
+	if pr < 6 {
+		return errors.New("Invalid preamble length requested.")
+	}
+	r.SetRegister(0x20, byte(pr>>8))
+	_, err := r.SetRegister(0x21, byte(pr&0xFF))
+	return err
 }
 
 func (r *RFM95W) SetFrequency(freq uint64) error {
 	steps := uint32(float64(freq) / RF95W_FREQ_STEP)
-	r.SetRegister(0x06, (steps&0xFF0000)>>16)
-	r.SetRegister(0x07, (steps&0x00FF00)>>8)
-	r.SetRegister(0x08, (steps & 0x0000FF))
+	r.SetRegister(0x06, steps>>16)
+	r.SetRegister(0x07, (steps>>8)&0xFF)
+	r.SetRegister(0x08, (steps & 0xFF))
 }
 
-//TODO
-func (r *RFM95W) SetTXPower(txpwr int) error {
-
+/*
+	SetTXPower().
+//FIXME:	 Always run at 17 dBm for now.
+*/
+func (r *RFM95W) SetTXPower() error {
+	_, err := r.SetRegister(0x09, 0x8F)
+	return err
 }
