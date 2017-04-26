@@ -4,6 +4,11 @@ import (
 	"github.com/cyoung/rpi"
 )
 
+/*
+	GetBytes().
+	 Bulk SPI read function.
+*/
+
 func (r *RFM95W) GetBytes(reg byte, len int) ([]byte, error) {
 	rpi.DigitalWrite(RF95W_CS_PIN, rpi.LOW)
 	defer rpi.DigitalWrite(RF95W_CS_PIN, rpi.HIGH)
@@ -15,6 +20,11 @@ func (r *RFM95W) GetBytes(reg byte, len int) ([]byte, error) {
 	}
 	return buf[1:], nil
 }
+
+/*
+	SetBytes()
+	 Bulk SPI write function.
+*/
 
 func (r *RFM95W) SetBytes(reg byte, val []byte) ([]byte, error) {
 	rpi.DigitalWrite(RF95W_CS_PIN, rpi.LOW)
@@ -32,6 +42,11 @@ func (r *RFM95W) SetBytes(reg byte, val []byte) ([]byte, error) {
 	return inBuf[1:], nil
 }
 
+/*
+	GetRegister().
+	 Get single byte from a register.
+*/
+
 func (r *RFM95W) GetRegister(reg byte) (byte, error) {
 	var ret byte
 	x, err := r.GetBytes(reg, 1)
@@ -40,6 +55,11 @@ func (r *RFM95W) GetRegister(reg byte) (byte, error) {
 	}
 	return ret, err
 }
+
+/*
+	SetRegister().
+	 Set single byte in a register.
+*/
 
 func (r *RFM95W) SetRegister(reg, val byte) (byte, error) {
 	var ret byte

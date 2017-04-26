@@ -6,7 +6,7 @@ import (
 )
 
 func main() {
-	rfm95w, err := goRFM95W.NewRFM95W()
+	rfm95w, err := goRFM95W.New()
 	if err != nil {
 		fmt.Printf("error: %s\n", err.Error())
 		return

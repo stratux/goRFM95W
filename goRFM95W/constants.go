@@ -1,3 +1,13 @@
 package goRFM95W
 
-const ()
+const (
+	RF95W_MODE_LORA         = 0x80
+	RF95W_MODE_SLEEP        = 0x00
+	RF95W_MODE_STDBY        = 0x01
+	RF95W_MODE_FSTX         = 0x02
+	RF95W_MODE_TX           = 0x03
+	RF95W_MODE_FSRX         = 0x04
+	RF95W_MODE_RXCONTINUOUS = 0x05
+	RF95W_MODE_RXSINGLE     = 0x06
+	RF95W_MODE_CAD          = 0x07
+)
