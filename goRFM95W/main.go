@@ -32,6 +32,8 @@ type RFM95W struct {
 	txQueue       chan []byte
 	currentMode   byte
 	stopQueue     chan int
+	// Temp variables for stats.
+	txStart time.Time
 }
 
 // Default settings.
@@ -312,6 +314,12 @@ func (r *RFM95W) sendMessage(msg []byte) error {
 		return err
 	}
 
+	// Set the message payload length register.
+	_, err = r.SetRegister(0x22, byte(len(msg)))
+	if err != nil {
+		return err
+	}
+
 	// Change DIOx interrupt mapping so that DIO0 interrupts on TxDone.
 	_, err = r.SetRegister(0x40, 0x40)
 	if err != nil {
@@ -319,12 +327,17 @@ func (r *RFM95W) sendMessage(msg []byte) error {
 	}
 
 	// Begin transmitting.
-	fmt.Printf("transmitting!\n")
+	r.txStart = time.Now()
 	err = r.SetMode(RF95W_MODE_TX)
 	return err
 }
 
-//TODO: Put the receiver into STDBY when SetFrequency, etc are called.
+/*
+	queueHandler().
+	 Receives TX messages and coordinates transmissions between RX. TX takes priority, and the default mode of opreation is
+	 "RXCONTINUOUS".
+*/
+
 func (r *RFM95W) queueHandler() {
 	//FIXME: Assuming that we're ready to start sending/receiving once this goroutine is started.
 	err := r.SetMode(RF95W_MODE_RXCONTINUOUS)
@@ -351,7 +364,8 @@ func (r *RFM95W) queueHandler() {
 			case RF95W_MODE_TX:
 				if irqFlags&RF95W_IRQ_FLAG_TXDONE != 0 {
 					// TX finished.
-					fmt.Printf("queueHandler() transmit finished.\n")
+					txEnd := time.Now()
+					fmt.Printf("queueHandler() transmit finished, t=%dms.\n", txEnd.Sub(r.txStart)/time.Millisecond)
 					// Are there more messages that we need to send? Always empty the queue before starting to receive.
 					if len(txWaiting) > 0 {
 						fmt.Printf("queuehandler() starting new transmission.\n")
