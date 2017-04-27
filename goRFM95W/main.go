@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/cyoung/rpi"
 	"golang.org/x/exp/io/spi"
+	"sync"
 	"time"
 )
 
@@ -26,6 +27,7 @@ type RFM95W struct {
 	cr            int
 	pr            int
 	interruptChan chan int
+	mu_Recv       *sync.Mutex
 	RecvBuf       []RFM95W_Message // This is constantly being filled up as messages are received.
 	txQueue       chan []byte
 	currentMode   byte
@@ -81,8 +83,10 @@ func New() (*RFM95W, error) {
 		txpwr: RF85W_DEFAULT_TXPWR,
 	}
 
+	// Variables that need initializing.
 	ret.txQueue = make(chan []byte, 1024)
 	ret.stopQueue = make(chan int)
+	ret.mu_Recv = &sync.Mutex{}
 
 	time.Sleep(100 * time.Millisecond)
 
@@ -398,7 +402,9 @@ func (r *RFM95W) queueHandler() {
 					newMessage.Buf = msgBuf
 					newMessage.Received = time.Now()
 					fmt.Printf("Message: %v\n", newMessage)
+					r.mu_Recv.Lock()
 					r.RecvBuf = append(r.RecvBuf, newMessage)
+					r.mu_Recv.Unlock()
 				}
 			}
 			// Clear the IRQ flags.
