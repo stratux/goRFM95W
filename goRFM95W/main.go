@@ -39,13 +39,13 @@ const (
 	RF95W_DEFAULT_FREQ = 915000000 // Hz
 	RF95W_DEFAULT_BW   = 500000    // Hz
 	RF95W_DEFAULT_SF   = 12
-	RF95W_DEFAULT_CR   = 4
+	RF95W_DEFAULT_CR   = 5
 	RF95W_DEFAULT_PR   = 8
 
 	// Hardware config.
-	RF95W_CS_PIN       = rpi.PIN_GPIO_10
+	RF95W_CS_PIN       = rpi.PIN_CE0
 	RF95W_DIO0_INT_PIN = rpi.PIN_GPIO_6
-	RF95W_ACT_PIN      = rpi.PIN_GPIO_7
+	RF95W_ACT_PIN      = rpi.PIN_CE1
 
 	SPI_WRITE_MASK = 0x80
 )
@@ -100,7 +100,7 @@ func New() (*RFM95W, error) {
 
 func (r *RFM95W) SetMode(mode byte) error {
 	_, err := r.SetRegister(0x01, mode)
-	if err != nil {
+	if err == nil {
 		r.currentMode = mode
 	}
 	return err
@@ -108,7 +108,7 @@ func (r *RFM95W) SetMode(mode byte) error {
 
 func (r *RFM95W) GetMode() (byte, error) {
 	ret, err := r.GetRegister(0x01)
-	if err != nil {
+	if err == nil {
 		r.currentMode = ret
 	}
 	return ret, err
@@ -298,6 +298,8 @@ func (r *RFM95W) Send(msg []byte) error {
 func (r *RFM95W) sendMessage(msg []byte) error {
 	r.SetMode(RF95W_MODE_STDBY)
 
+	rpi.DigitalWrite(RF95W_ACT_PIN, rpi.HIGH) // Turn on ACT LED.
+
 	// Set the FIFO address pointer to the start.
 	_, err := r.SetRegister(0x0D, 0x00)
 	if err != nil {
@@ -317,6 +319,7 @@ func (r *RFM95W) sendMessage(msg []byte) error {
 	}
 
 	// Begin transmitting.
+	fmt.Printf("transmitting!\n")
 	err = r.SetMode(RF95W_MODE_TX)
 	return err
 }
@@ -426,7 +429,6 @@ func (r *RFM95W) queueHandler() {
 			}
 			if r.currentMode != RF95W_MODE_TX { // If we're currently in TX mode, let the current transmission finish.
 				fmt.Printf("queuehandler() starting new transmission.\n")
-				rpi.DigitalWrite(RF95W_ACT_PIN, rpi.HIGH) // Turn on ACT LED.
 				// Switch to transmit mode.
 				err := r.sendMessage(txWaiting[0])
 				if err != nil {
@@ -460,4 +462,17 @@ func (r *RFM95W) Start() {
 func (r *RFM95W) Stop() {
 	fmt.Printf("Stopping queue thread...\n")
 	r.stopQueue <- 1
+}
+
+/*
+	FlushRXBuffer().
+	 Get all data in RecvBuf and clear it.
+*/
+
+func (r *RFM95W) FlushRXBuffer() []RFM95W_Message {
+	r.mu_Recv.Lock()
+	ret := r.RecvBuf
+	r.RecvBuf = make([]RFM95W_Message, 0)
+	r.mu_Recv.Unlock()
+	return ret
 }
