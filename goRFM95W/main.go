@@ -34,6 +34,7 @@ type RFM95W struct {
 	stopQueue     chan int
 }
 
+// Default settings.
 const (
 	RF95W_DEFAULT_FREQ = 915000000 // Hz
 	RF95W_DEFAULT_BW   = 500000    // Hz
@@ -44,6 +45,7 @@ const (
 	// Hardware config.
 	RF95W_CS_PIN       = rpi.PIN_GPIO_10
 	RF95W_DIO0_INT_PIN = rpi.PIN_GPIO_6
+	RF95W_ACT_PIN      = rpi.PIN_GPIO_7
 
 	SPI_WRITE_MASK = 0x80
 )
@@ -53,10 +55,12 @@ func New() (*RFM95W, error) {
 	rpi.WiringPiSetup()
 
 	// Set up the CS and interrupt (DIO0) pins.
-	rpi.PinMode(RF95W_CS_PIN, rpi.OUTPUT)
-	rpi.PinMode(RF95W_DIO0_INT_PIN, rpi.INPUT)
+	rpi.PinMode(RF95W_CS_PIN, rpi.OUTPUT)      // Chip Select.
+	rpi.PinMode(RF95W_DIO0_INT_PIN, rpi.INPUT) // DIO0 interrupt.
+	rpi.PinMode(RF95W_ACT_PIN, rpi.OUTPUT)     // ACT LED.
 
 	rpi.DigitalWrite(RF95W_CS_PIN, rpi.HIGH)
+	rpi.DigitalWrite(RF95W_ACT_PIN, rpi.LOW)
 
 	spiDev := &spi.Devfs{
 		Dev:      "/dev/spidev0.0",
@@ -357,6 +361,8 @@ func (r *RFM95W) queueHandler() {
 						}
 					} else {
 						// No more messages waiting to transmit, go back to receive mode.
+						fmt.Printf("queueHandler() finished sending all TX messages, switching back to RX mode.\n")
+						rpi.DigitalWrite(RF95W_ACT_PIN, rpi.LOW) // Turn off ACT LED.
 						r.SetMode(RF95W_MODE_RXCONTINUOUS)
 					}
 				}
@@ -420,6 +426,7 @@ func (r *RFM95W) queueHandler() {
 			}
 			if r.currentMode != RF95W_MODE_TX { // If we're currently in TX mode, let the current transmission finish.
 				fmt.Printf("queuehandler() starting new transmission.\n")
+				rpi.DigitalWrite(RF95W_ACT_PIN, rpi.HIGH) // Turn on ACT LED.
 				// Switch to transmit mode.
 				err := r.sendMessage(txWaiting[0])
 				if err != nil {
