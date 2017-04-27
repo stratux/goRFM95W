@@ -73,14 +73,13 @@ func New() (*RFM95W, error) {
 	SPI.SetCSChange(false)
 
 	ret := &RFM95W{
-		SPI:   SPI,
-		mode:  0, // FIXME.
-		freq:  RF95W_DEFAULT_FREQ,
-		bw:    RF95W_DEFAULT_BW,
-		sf:    RF95W_DEFAULT_SF,
-		cr:    RF95W_DEFAULT_CR,
-		pr:    RF95_DEFAULT_PR,
-		txpwr: RF85W_DEFAULT_TXPWR,
+		SPI:  SPI,
+		mode: 0, // FIXME.
+		freq: RF95W_DEFAULT_FREQ,
+		bw:   RF95W_DEFAULT_BW,
+		sf:   RF95W_DEFAULT_SF,
+		cr:   RF95W_DEFAULT_CR,
+		pr:   RF95W_DEFAULT_PR,
 	}
 
 	// Variables that need initializing.
@@ -98,7 +97,7 @@ func New() (*RFM95W, error) {
 func (r *RFM95W) SetMode(mode byte) error {
 	_, err := r.SetRegister(0x01, mode)
 	if err != nil {
-		r.currentMOde = mode
+		r.currentMode = mode
 	}
 	return err
 }
@@ -106,7 +105,7 @@ func (r *RFM95W) SetMode(mode byte) error {
 func (r *RFM95W) GetMode() (byte, error) {
 	ret, err := r.GetRegister(0x01)
 	if err != nil {
-		currentMode = ret
+		r.currentMode = ret
 	}
 	return ret, err
 }
@@ -138,7 +137,7 @@ func (r *RFM95W) init() error {
 	}
 
 	// Set up the WiringPi interrupt for DIO0.
-	r.interruptChan = WiringPiISR(RF95W_DIO0_INT_PIN, rpi.INT_EDGE_RISING)
+	r.interruptChan = rpi.WiringPiISR(RF95W_DIO0_INT_PIN, rpi.INT_EDGE_RISING)
 
 	// Set base addresses of the FIFO buffer in both TX and RX cases to zero.
 	r.SetRegister(0x0E, 0x00)
@@ -164,7 +163,8 @@ func (r *RFM95W) init() error {
 */
 
 func (r *RFM95W) SetBandwidth(bw int) error {
-	if b, ok := RFM95W_Bandwidths[bw]; !ok {
+	b, ok := RFM95W_Bandwidths[bw]
+	if !ok {
 		return errors.New("Invalid bandwidth requested.")
 	}
 	// Get initial value.
@@ -197,7 +197,7 @@ func (r *RFM95W) SetCodingRate(cr int) error {
 	// Set only the coding rate portion.
 	new_val := (val & 0xF1) | (b << 1)
 	fmt.Printf("SetCodingRate(): %02x -> %02x\n", val, new_val)
-	_, err := r.SetRegister(0x1D, new_val)
+	_, err = r.SetRegister(0x1D, new_val)
 	return err
 }
 
@@ -220,7 +220,7 @@ func (r *RFM95W) SetExplicitHeaderMode(wantHeader bool) error {
 	// Set only the header portion.
 	new_val := (val & 0xFE) | b
 	fmt.Printf("SetExplicitHeaderMode(): %02x -> %02x\n", val, new_val)
-	_, err := r.SetRegister(0x1D, new_val)
+	_, err = r.SetRegister(0x1D, new_val)
 	return err
 }
 
@@ -242,7 +242,7 @@ func (r *RFM95W) SetSpreadingFactor(sf int) error {
 	// Set only the spreading factor portion.
 	new_val := (val & 0x0F) | (b << 4)
 	fmt.Printf("SetSpreadingFactor(): %02x -> %02x\n", val, new_val)
-	_, err := r.SetRegister(0x1E, new_val)
+	_, err = r.SetRegister(0x1E, new_val)
 	return err
 }
 
@@ -262,9 +262,10 @@ func (r *RFM95W) SetPreambleLength(pr int) error {
 
 func (r *RFM95W) SetFrequency(freq uint64) error {
 	steps := uint32(float64(freq) / RF95W_FREQ_STEP)
-	r.SetRegister(0x06, steps>>16)
-	r.SetRegister(0x07, (steps>>8)&0xFF)
-	r.SetRegister(0x08, (steps & 0xFF))
+	r.SetRegister(0x06, byte(steps>>16))
+	r.SetRegister(0x07, byte((steps>>8)&0xFF))
+	_, err := r.SetRegister(0x08, byte(steps&0xFF))
+	return err
 }
 
 /*
@@ -287,6 +288,7 @@ func (r *RFM95W) Send(msg []byte) error {
 	}
 
 	r.txQueue <- msg
+	return nil
 }
 
 func (r *RFM95W) sendMessage(msg []byte) error {
@@ -331,13 +333,13 @@ func (r *RFM95W) queueHandler() {
 		return
 	}
 
-	txWaiting = make([][]byte, 0)
+	txWaiting := make([][]byte, 0)
 	for {
 		select {
 		case <-r.interruptChan:
 			// Get the IRQ flags.
-			irqFlags := r.GetRegister(0x12)
-			fmt.Printf("queueHandler() interrupt received, currentMode=%02x, irqFlags=%02x\n", currentMOde, irqFlags)
+			irqFlags, _ := r.GetRegister(0x12)
+			fmt.Printf("queueHandler() interrupt received, currentMode=%02x, irqFlags=%02x\n", r.currentMode, irqFlags)
 			switch r.currentMode {
 			case RF95W_MODE_TX:
 				if irqFlags&RF95W_IRQ_FLAG_TXDONE != 0 {
@@ -378,7 +380,7 @@ func (r *RFM95W) queueHandler() {
 						continue
 					}
 					// Set the read address to the start of the message in the FIFO queue.
-					err = r.SetRegister(0x0D, fifoPtr)
+					_, err = r.SetRegister(0x0D, fifoPtr)
 					if err != nil {
 						fmt.Printf("queueHandler() fatal error receiving packet, can't set FIFO pointer: %s\n", err.Error())
 						continue
@@ -395,7 +397,7 @@ func (r *RFM95W) queueHandler() {
 					//FIXME: Converting snr should be easier.
 					rdr := bytes.NewReader([]byte{snrByte})
 					var snr int8
-					binary.Read(buf, binary.LittleEndian, &snr)
+					binary.Read(rdr, binary.LittleEndian, &snr)
 					var newMessage RFM95W_Message
 					newMessage.SNR = float64(snr) / 4.0
 					newMessage.RSSI = int(rssiByte) - 137
