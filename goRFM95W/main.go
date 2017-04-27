@@ -336,6 +336,7 @@ func (r *RFM95W) sendMessage(msg []byte) error {
 	queueHandler().
 	 Receives TX messages and coordinates transmissions between RX. TX takes priority, and the default mode of opreation is
 	 "RXCONTINUOUS".
+//FIXME: Check 0x18 RegModemStat/ModemStatus to see if "RX on-going" before switching to TX.
 */
 
 func (r *RFM95W) queueHandler() {
