@@ -29,6 +29,7 @@ type RFM95W struct {
 	RecvBuf       []RFM95W_Message // This is constantly being filled up as messages are received.
 	txQueue       chan []byte
 	currentMode   byte
+	stopQueue     chan int
 }
 
 const (
@@ -81,6 +82,7 @@ func New() (*RFM95W, error) {
 	}
 
 	ret.txQueue = make(chan []byte, 1024)
+	ret.stopQueue = make(chan int)
 
 	time.Sleep(100 * time.Millisecond)
 
@@ -298,7 +300,7 @@ func (r *RFM95W) sendMessage(msg []byte) error {
 		return err
 	}
 
-	// Change DIOx register mapping so that DIO0 interrupts when transmission has finished.
+	// Change DIOx interrupt mapping so that DIO0 interrupts on TxDone.
 	_, err = r.SetRegister(0x40, 0x40)
 	if err != nil {
 		return err
@@ -315,6 +317,13 @@ func (r *RFM95W) queueHandler() {
 	err := r.SetMode(RF95W_MODE_RXCONTINUOUS)
 	if err != nil {
 		fmt.Printf("queueHandler() can't set receive mode: %s\n", err.Error())
+		return
+	}
+
+	//Change DIOx interrupt mapping so that DIO0 interrupts on RxDone.
+	_, err = r.SetRegister(0x40, 0x00)
+	if err != nil {
+		fmt.Printf("queueHandler() can't set up interrupt: %s\n", err.Error())
 		return
 	}
 
@@ -411,10 +420,29 @@ func (r *RFM95W) queueHandler() {
 					txWaiting = txWaiting[1:] // Message was buffered to the radio successfully.
 				}
 			}
-		case <-r.shutdownQueueHandler:
+		case <-r.stopQueue:
 			fmt.Printf("queueHandler() received shutdown.\n")
 			r.SetMode(RF95W_MODE_STDBY)
 			return
 		}
 	}
+}
+
+/*
+	Start().
+	 Starts the queue handler (TX on request and continuous RX).
+	 This is called when all of the parameters and settings have been set.
+*/
+func (r *RFM95W) Start() {
+	go r.queueHandler()
+}
+
+/*
+	Stop().
+	 Stops the queue handler.
+	 This is called when we want to change settings.
+*/
+func (r *RFM95W) Stop() {
+	fmt.Printf("Stopping queue thread...\n")
+	r.stopQueue <- 1
 }
