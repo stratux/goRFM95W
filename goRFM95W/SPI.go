@@ -14,7 +14,9 @@ func (r *RFM95W) GetBytes(reg byte, len int) ([]byte, error) {
 	defer rpi.DigitalWrite(RF95W_CS_PIN, rpi.HIGH)
 
 	buf := make([]byte, len+1)
-	err := r.SPI.Tx([]byte{byte(uint32(reg) & ^uint32(SPI_WRITE_MASK)), 0x00}, buf)
+	bufTX := make([]byte, len+1)
+	bufTX[0] = byte(uint32(reg) & ^uint32(SPI_WRITE_MASK))
+	err := r.SPI.Tx(bufTX, buf)
 	if err != nil {
 		return nil, err
 	}

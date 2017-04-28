@@ -332,6 +332,20 @@ func (r *RFM95W) sendMessage(msg []byte) error {
 	return err
 }
 
+func (r *RFM95W) setRXMode() error {
+	err := r.SetMode(RF95W_MODE_RXCONTINUOUS)
+	if err != nil {
+		return err
+	}
+
+	//Change DIOx interrupt mapping so that DIO0 interrupts on RxDone.
+	_, err = r.SetRegister(0x40, 0x00)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 /*
 	queueHandler().
 	 Receives TX messages and coordinates transmissions between RX. TX takes priority, and the default mode of opreation is
@@ -341,16 +355,9 @@ func (r *RFM95W) sendMessage(msg []byte) error {
 
 func (r *RFM95W) queueHandler() {
 	//FIXME: Assuming that we're ready to start sending/receiving once this goroutine is started.
-	err := r.SetMode(RF95W_MODE_RXCONTINUOUS)
+	err := r.setRXMode()
 	if err != nil {
 		fmt.Printf("queueHandler() can't set receive mode: %s\n", err.Error())
-		return
-	}
-
-	//Change DIOx interrupt mapping so that DIO0 interrupts on RxDone.
-	_, err = r.SetRegister(0x40, 0x00)
-	if err != nil {
-		fmt.Printf("queueHandler() can't set up interrupt: %s\n", err.Error())
 		return
 	}
 
@@ -381,7 +388,7 @@ func (r *RFM95W) queueHandler() {
 						// No more messages waiting to transmit, go back to receive mode.
 						fmt.Printf("queueHandler() finished sending all TX messages, switching back to RX mode.\n")
 						rpi.DigitalWrite(RF95W_ACT_PIN, rpi.LOW) // Turn off ACT LED.
-						r.SetMode(RF95W_MODE_RXCONTINUOUS)
+						r.setRXMode()
 					}
 				}
 			case RF95W_MODE_RXCONTINUOUS:
