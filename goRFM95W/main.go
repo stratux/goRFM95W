@@ -46,7 +46,7 @@ const (
 
 	// Hardware config.
 	RF95W_CS_PIN       = rpi.PIN_CE0
-	RF95W_DIO0_INT_PIN = rpi.PIN_GPIO_6
+	RF95W_DIO0_INT_PIN = rpi.PIN_GPIO_4
 	RF95W_ACT_PIN      = rpi.PIN_CE1
 
 	SPI_WRITE_MASK = 0x80
