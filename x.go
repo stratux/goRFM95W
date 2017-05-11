@@ -40,5 +40,16 @@ func main() {
 	for {
 		time.Sleep(1 * time.Second)
 		rfm95w.Send(buf)
+		msgs := rfm95w.FlushRXBuffer()
+		if len(msgs) > 0 {
+			fmt.Printf("%d messages received:\n", len(msgs))
+			for _, msg := range msgs {
+				fmt.Printf("Message: ")
+				for i := 0; i < len(msg.Buf); i++ {
+					fmt.Printf("%02x ", msg.Buf[i])
+				}
+				fmt.Printf("\n")
+			}
+		}
 	}
 }

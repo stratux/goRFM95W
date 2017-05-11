@@ -434,7 +434,6 @@ func (r *RFM95W) queueHandler() {
 					newMessage.RSSI = int(rssiByte) - 137
 					newMessage.Buf = msgBuf
 					newMessage.Received = time.Now()
-					fmt.Printf("Message: %v\n", newMessage)
 					r.mu_Recv.Lock()
 					r.RecvBuf = append(r.RecvBuf, newMessage)
 					r.mu_Recv.Unlock()
