@@ -399,7 +399,7 @@ func (r *RFM95W) queueHandler() {
 				} else if irqFlags&RF95W_IRQ_FLAG_RXDONE != 0 {
 					fmt.Printf("queueHandler() received RXDONE.\n")
 					// Get the total length of the packet.
-					len, err := r.GetRegister(0x13)
+					msgLen, err := r.GetRegister(0x13)
 					if err != nil {
 						fmt.Printf("queueHandler() fatal error receiving packet, can't get length: %s\n", err.Error())
 						continue
@@ -417,7 +417,7 @@ func (r *RFM95W) queueHandler() {
 						continue
 					}
 					// Read the data.
-					msgBuf, err := r.GetBytes(0x00, int(len))
+					msgBuf, err := r.GetBytes(0x00, int(msgLen))
 					if err != nil {
 						fmt.Printf("queueHandler() fatal error receiving packet, can't read FIFO buffer: %s\n", err.Error())
 						continue
