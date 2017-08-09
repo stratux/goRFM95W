@@ -52,7 +52,7 @@ func PacketDecode(msg []byte) ([]byte, error) {
 		crc[i] = msg[6*i+5]
 		crc_received := byte(crc8.Checksum(data[i], table))
 		if crc[i] != crc_received {
-			fmt.Printf("crc err, block %d\n", i)
+			//fmt.Printf("crc err, block %d\n", i)
 			data[i] = nil // Delete this block for reconstruction by RS algorithm.
 		}
 	}
