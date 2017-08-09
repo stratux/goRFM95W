@@ -42,6 +42,7 @@ func main() {
 	}
 
 	for {
+		rfm95w.Send(buf)
 		time.Sleep(1 * time.Second)
 		msgs := rfm95w.FlushRXBuffer()
 		if len(msgs) > 0 {
