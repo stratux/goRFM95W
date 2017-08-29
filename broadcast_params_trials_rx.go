@@ -87,7 +87,7 @@ func main() {
 			fmt.Printf("error: %s\n", err.Error())
 		}
 
-		recvTimeout := time.After(150*time.Millisecond + (4 * testParamsTXTime[i]))
+		recvTimeout := time.After(250*time.Millisecond + (4 * testParamsTXTime[i]))
 		checkMsgs := time.Tick(10 * time.Millisecond)
 		for {
 			finished := false
