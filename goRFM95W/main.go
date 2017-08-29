@@ -137,12 +137,27 @@ func (r *RFM95W) Close() {
 	r.SPI.Close()
 }
 
-func (r *RFM95W) SetParams(param RFM95W_Params) {
+func (r *RFM95W) setParams(param RFM95W_Params) {
+
 	r.SetBandwidth(param.Bandwidth)
 	r.SetSpreadingFactor(param.SpreadingFactor)
 	r.SetCodingRate(param.CodingRate)
 	r.SetPreambleLength(param.PreambleLength)
 	r.SetFrequency(param.Frequency)
+
+}
+
+func (r *RFM95W) SetParams(param RFM95W_Params) error {
+	if r.currentMode == RF95W_MODE_TX {
+		return errors.New("SetParams(): Not ready.")
+	}
+
+	r.settings = param
+	r.init()
+
+	r.setRXMode()
+
+	return nil
 }
 
 func (r *RFM95W) init() error {
@@ -170,7 +185,7 @@ func (r *RFM95W) init() error {
 	// Set module to STDBY mode.
 	r.SetMode(RF95W_MODE_STDBY)
 
-	r.SetParams(r.settings)
+	r.setParams(r.settings)
 
 	r.SetTXPower()
 
@@ -262,6 +277,9 @@ func (r *RFM95W) SetExplicitHeaderMode(wantHeader bool) error {
 */
 
 func (r *RFM95W) SetSpreadingFactor(sf int) error {
+	if sf == 6 {
+		panic("SF=6 not implemented.")
+	}
 	if sf < 6 || sf > 12 {
 		return errors.New("Invalid spreading factor requested.")
 	}
