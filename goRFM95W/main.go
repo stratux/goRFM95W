@@ -40,7 +40,8 @@ type RFM95W struct {
 	currentMode   byte
 	stopQueue     chan int
 	// Temp variables for stats.
-	txStart time.Time
+	txStart    time.Time
+	LastTXTime time.Duration
 }
 
 // Default settings.
@@ -456,8 +457,9 @@ func (r *RFM95W) queueHandler() {
 				if irqFlags&RF95W_IRQ_FLAG_TXDONE != 0 {
 					// TX finished.
 					txEnd := time.Now()
+					r.LastTXTime = txEnd.Sub(r.txStart)
 					if r.Debug {
-						fmt.Printf("queueHandler() transmit finished, t=%dms.\n", txEnd.Sub(r.txStart)/time.Millisecond)
+						fmt.Printf("queueHandler() transmit finished, t=%dms.\n", r.LastTXTime/time.Millisecond)
 					}
 					// Are there more messages that we need to send? Always empty the queue before starting to receive.
 					if len(txWaiting) > 0 {
