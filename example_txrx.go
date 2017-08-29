@@ -48,7 +48,10 @@ func main() {
 		if len(msgs) > 0 {
 			fmt.Printf("%d messages received:\n", len(msgs))
 			for _, msg := range msgs {
+				fmt.Printf("********** Msg Received: RSSI=%d, SNR=%f **********\n", msg.RSSI, msg.SNR)
+				fmt.Printf("Frequency: %0.3f MHz, Bandwidth: %d kHz, SpreadingFactor: %d, CodingRate: %d, PremableLength: %d\n", float32(msg.Params.Frequency)/float32(1000000.0), msg.Params.Bandwidth/1000, msg.Params.SpreadingFactor, msg.Params.CodingRate, msg.Params.PreambleLength)
 				fmt.Printf("%s: %s\n", msg.Received, string(msg.Buf))
+				fmt.Printf("**********\n")
 			}
 		}
 	}

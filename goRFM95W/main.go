@@ -11,21 +11,26 @@ import (
 	"time"
 )
 
+type RFM95W_Params struct {
+	Frequency       uint64 // Hz.
+	Bandwidth       int    // Hz.
+	SpreadingFactor int
+	CodingRate      int
+	PreambleLength  int
+}
+
 type RFM95W_Message struct {
 	Buf      []byte
 	RSSI     int     // dBm
 	SNR      float64 // dB
 	Received time.Time
+	Params   RFM95W_Params
 }
 
 type RFM95W struct {
 	SPI           *spi.Device
 	mode          int
-	freq          uint64 // Hz
-	bw            int    // Hz
-	sf            int
-	cr            int
-	pr            int
+	settings      RFM95W_Params
 	interruptChan chan int
 	mu_Recv       *sync.Mutex
 	RecvBuf       []RFM95W_Message // This is constantly being filled up as messages are received.
@@ -81,11 +86,13 @@ func New() (*RFM95W, error) {
 	ret := &RFM95W{
 		SPI:  SPI,
 		mode: 0, // FIXME.
-		freq: RF95W_DEFAULT_FREQ,
-		bw:   RF95W_DEFAULT_BW,
-		sf:   RF95W_DEFAULT_SF,
-		cr:   RF95W_DEFAULT_CR,
-		pr:   RF95W_DEFAULT_PR,
+		settings: RFM95W_Params{
+			Frequency:       RF95W_DEFAULT_FREQ,
+			Bandwidth:       RF95W_DEFAULT_BW,
+			SpreadingFactor: RF95W_DEFAULT_SF,
+			CodingRate:      RF95W_DEFAULT_CR,
+			PreambleLength:  RF95W_DEFAULT_PR,
+		},
 	}
 
 	// Variables that need initializing.
@@ -152,12 +159,12 @@ func (r *RFM95W) init() error {
 	// Set module to STDBY mode.
 	r.SetMode(RF95W_MODE_STDBY)
 
-	r.SetBandwidth(r.bw)
-	r.SetSpreadingFactor(r.sf)
-	r.SetCodingRate(r.cr)
+	r.SetBandwidth(r.settings.Bandwidth)
+	r.SetSpreadingFactor(r.settings.SpreadingFactor)
+	r.SetCodingRate(r.settings.CodingRate)
 
-	r.SetPreambleLength(r.pr)
-	r.SetFrequency(r.freq)
+	r.SetPreambleLength(r.settings.PreambleLength)
+	r.SetFrequency(r.settings.Frequency)
 	r.SetTXPower()
 
 	return nil
@@ -182,6 +189,9 @@ func (r *RFM95W) SetBandwidth(bw int) error {
 	new_val := (val & 0x0F) | (b << 4)
 	fmt.Printf("SetBandwidth(): %02x -> %02x\n", val, new_val)
 	_, err = r.SetRegister(0x1D, new_val)
+	if err != nil {
+		r.settings.Bandwidth = bw
+	}
 	return err
 }
 
@@ -204,6 +214,9 @@ func (r *RFM95W) SetCodingRate(cr int) error {
 	new_val := (val & 0xF1) | (b << 1)
 	fmt.Printf("SetCodingRate(): %02x -> %02x\n", val, new_val)
 	_, err = r.SetRegister(0x1D, new_val)
+	if err != nil {
+		r.settings.CodingRate = cr
+	}
 	return err
 }
 
@@ -249,6 +262,9 @@ func (r *RFM95W) SetSpreadingFactor(sf int) error {
 	new_val := (val & 0x0F) | (b << 4)
 	fmt.Printf("SetSpreadingFactor(): %02x -> %02x\n", val, new_val)
 	_, err = r.SetRegister(0x1E, new_val)
+	if err != nil {
+		r.settings.SpreadingFactor = sf
+	}
 	return err
 }
 
@@ -263,6 +279,9 @@ func (r *RFM95W) SetPreambleLength(pr int) error {
 	}
 	r.SetRegister(0x20, byte(pr>>8))
 	_, err := r.SetRegister(0x21, byte(pr&0xFF))
+	if err != nil {
+		r.settings.PreambleLength = pr
+	}
 	return err
 }
 
@@ -271,6 +290,9 @@ func (r *RFM95W) SetFrequency(freq uint64) error {
 	r.SetRegister(0x06, byte(steps>>16))
 	r.SetRegister(0x07, byte((steps>>8)&0xFF))
 	_, err := r.SetRegister(0x08, byte(steps&0xFF))
+	if err != nil {
+		r.settings.Frequency = freq
+	}
 	return err
 }
 
@@ -434,6 +456,7 @@ func (r *RFM95W) queueHandler() {
 					newMessage.RSSI = int(rssiByte) - 137
 					newMessage.Buf = msgBuf
 					newMessage.Received = time.Now()
+					newMessage.Params = r.settings
 					r.mu_Recv.Lock()
 					r.RecvBuf = append(r.RecvBuf, newMessage)
 					r.mu_Recv.Unlock()
