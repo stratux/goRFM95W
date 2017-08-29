@@ -153,7 +153,11 @@ func (r *RFM95W) SetParams(param RFM95W_Params) error {
 	}
 
 	r.settings = param
-	r.init()
+	err := r.init()
+
+	if err != nil {
+		return err
+	}
 
 	r.setRXMode()
 
@@ -175,8 +179,10 @@ func (r *RFM95W) init() error {
 		return errors.New("Init failed - couldn't set mode on module.")
 	}
 
-	// Set up the WiringPi interrupt for DIO0.
-	r.interruptChan = rpi.WiringPiISR(RF95W_DIO0_INT_PIN, rpi.INT_EDGE_RISING)
+	// Set up the WiringPi interrupt for DIO0, if it is not yet set up.
+	if r.interruptChan == nil {
+		r.interruptChan = rpi.WiringPiISR(RF95W_DIO0_INT_PIN, rpi.INT_EDGE_RISING)
+	}
 
 	// Set base addresses of the FIFO buffer in both TX and RX cases to zero.
 	r.SetRegister(0x0E, 0x00)
