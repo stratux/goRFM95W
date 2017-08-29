@@ -135,6 +135,14 @@ func (r *RFM95W) Close() {
 	r.SPI.Close()
 }
 
+func (r *RFM95W) SetParams(param RFM95W_Params) {
+	r.SetBandwidth(param.Bandwidth)
+	r.SetSpreadingFactor(param.SpreadingFactor)
+	r.SetCodingRate(param.CodingRate)
+	r.SetPreambleLength(param.PreambleLength)
+	r.SetFrequency(param.Frequency)
+}
+
 func (r *RFM95W) init() error {
 	r.SetMode(RF95W_MODE_SLEEP | RF95W_MODE_LORA)
 
@@ -160,12 +168,8 @@ func (r *RFM95W) init() error {
 	// Set module to STDBY mode.
 	r.SetMode(RF95W_MODE_STDBY)
 
-	r.SetBandwidth(r.settings.Bandwidth)
-	r.SetSpreadingFactor(r.settings.SpreadingFactor)
-	r.SetCodingRate(r.settings.CodingRate)
+	r.SetParams(r.settings)
 
-	r.SetPreambleLength(r.settings.PreambleLength)
-	r.SetFrequency(r.settings.Frequency)
 	r.SetTXPower()
 
 	return nil
