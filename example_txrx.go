@@ -36,9 +36,9 @@ func main() {
 
 	rfm95w.Start()
 
-	buf := make([]byte, 200)
-	for i := 0; i < 200; i++ {
-		buf[i] = byte(i)
+	buf := make([]byte, 96)
+	for i := 0; i < 96; i++ {
+		buf[i] = byte(i + 33)
 	}
 
 	for {
