@@ -166,17 +166,24 @@ func (r *RFM95W) SetParams(param RFM95W_Params) error {
 }
 
 func (r *RFM95W) init() error {
-	r.SetMode(RF95W_MODE_SLEEP | RF95W_MODE_LORA)
+	i := 0
+	for i = 0; i < 10; i++ {
+		// Retry setting the mode 10 times.
+		r.SetMode(RF95W_MODE_SLEEP | RF95W_MODE_LORA)
 
-	time.Sleep(10 * time.Millisecond)
+		time.Sleep(10 * time.Millisecond)
 
-	mode, err := r.GetMode()
-	if err != nil {
-		return err
+		mode, err := r.GetMode()
+		if err != nil {
+			return err
+		}
+
+		// Use the "mode" setting to check connection.
+		if mode == RF95W_MODE_SLEEP|RF95W_MODE_LORA {
+			break
+		}
 	}
-
-	// Use the "mode" setting to check connection.
-	if mode != RF95W_MODE_SLEEP|RF95W_MODE_LORA {
+	if i == 10 { // 10 retries was not enough - some issue.
 		return errors.New("Init failed - couldn't set mode on module.")
 	}
 
