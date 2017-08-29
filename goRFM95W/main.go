@@ -28,6 +28,7 @@ type RFM95W_Message struct {
 }
 
 type RFM95W struct {
+	Debug         bool // Print debug messages
 	SPI           *spi.Device
 	mode          int
 	settings      RFM95W_Params
@@ -187,7 +188,9 @@ func (r *RFM95W) SetBandwidth(bw int) error {
 	}
 	// Set only the bandwidth portion.
 	new_val := (val & 0x0F) | (b << 4)
-	fmt.Printf("SetBandwidth(): %02x -> %02x\n", val, new_val)
+	if r.Debug {
+		fmt.Printf("SetBandwidth(): %02x -> %02x\n", val, new_val)
+	}
 	_, err = r.SetRegister(0x1D, new_val)
 	if err != nil {
 		r.settings.Bandwidth = bw
@@ -212,7 +215,9 @@ func (r *RFM95W) SetCodingRate(cr int) error {
 	}
 	// Set only the coding rate portion.
 	new_val := (val & 0xF1) | (b << 1)
-	fmt.Printf("SetCodingRate(): %02x -> %02x\n", val, new_val)
+	if r.Debug {
+		fmt.Printf("SetCodingRate(): %02x -> %02x\n", val, new_val)
+	}
 	_, err = r.SetRegister(0x1D, new_val)
 	if err != nil {
 		r.settings.CodingRate = cr
@@ -238,7 +243,9 @@ func (r *RFM95W) SetExplicitHeaderMode(wantHeader bool) error {
 	}
 	// Set only the header portion.
 	new_val := (val & 0xFE) | b
-	fmt.Printf("SetExplicitHeaderMode(): %02x -> %02x\n", val, new_val)
+	if r.Debug {
+		fmt.Printf("SetExplicitHeaderMode(): %02x -> %02x\n", val, new_val)
+	}
 	_, err = r.SetRegister(0x1D, new_val)
 	return err
 }
@@ -260,7 +267,9 @@ func (r *RFM95W) SetSpreadingFactor(sf int) error {
 	}
 	// Set only the spreading factor portion.
 	new_val := (val & 0x0F) | (b << 4)
-	fmt.Printf("SetSpreadingFactor(): %02x -> %02x\n", val, new_val)
+	if r.Debug {
+		fmt.Printf("SetSpreadingFactor(): %02x -> %02x\n", val, new_val)
+	}
 	_, err = r.SetRegister(0x1E, new_val)
 	if err != nil {
 		r.settings.SpreadingFactor = sf
@@ -379,7 +388,9 @@ func (r *RFM95W) queueHandler() {
 	//FIXME: Assuming that we're ready to start sending/receiving once this goroutine is started.
 	err := r.setRXMode()
 	if err != nil {
-		fmt.Printf("queueHandler() can't set receive mode: %s\n", err.Error())
+		if r.Debug {
+			fmt.Printf("queueHandler() can't set receive mode: %s\n", err.Error())
+		}
 		return
 	}
 
@@ -389,16 +400,22 @@ func (r *RFM95W) queueHandler() {
 		case <-r.interruptChan:
 			// Get the IRQ flags.
 			irqFlags, _ := r.GetRegister(0x12)
-			fmt.Printf("queueHandler() interrupt received, currentMode=%02x, irqFlags=%02x\n", r.currentMode, irqFlags)
+			if r.Debug {
+				fmt.Printf("queueHandler() interrupt received, currentMode=%02x, irqFlags=%02x\n", r.currentMode, irqFlags)
+			}
 			switch r.currentMode {
 			case RF95W_MODE_TX:
 				if irqFlags&RF95W_IRQ_FLAG_TXDONE != 0 {
 					// TX finished.
 					txEnd := time.Now()
-					fmt.Printf("queueHandler() transmit finished, t=%dms.\n", txEnd.Sub(r.txStart)/time.Millisecond)
+					if r.Debug {
+						fmt.Printf("queueHandler() transmit finished, t=%dms.\n", txEnd.Sub(r.txStart)/time.Millisecond)
+					}
 					// Are there more messages that we need to send? Always empty the queue before starting to receive.
 					if len(txWaiting) > 0 {
-						fmt.Printf("queuehandler() starting new transmission.\n")
+						if r.Debug {
+							fmt.Printf("queuehandler() starting new transmission.\n")
+						}
 						// Switch to transmit mode (again).
 						err := r.sendMessage(txWaiting[0])
 						if err != nil {
@@ -408,7 +425,9 @@ func (r *RFM95W) queueHandler() {
 						}
 					} else {
 						// No more messages waiting to transmit, go back to receive mode.
-						fmt.Printf("queueHandler() finished sending all TX messages, switching back to RX mode.\n")
+						if r.Debug {
+							fmt.Printf("queueHandler() finished sending all TX messages, switching back to RX mode.\n")
+						}
 						rpi.DigitalWrite(RF95W_ACT_PIN, rpi.LOW) // Turn off ACT LED.
 						r.setRXMode()
 					}
@@ -419,7 +438,9 @@ func (r *RFM95W) queueHandler() {
 				} else if irqFlags&RF95W_IRQ_FLAG_PAYLOADCRCERROR != 0 {
 					fmt.Printf("queueHandler() received packet with CRC error. discarding.\n")
 				} else if irqFlags&RF95W_IRQ_FLAG_RXDONE != 0 {
-					fmt.Printf("queueHandler() received RXDONE.\n")
+					if r.Debug {
+						fmt.Printf("queueHandler() received RXDONE.\n")
+					}
 					// Get the total length of the packet.
 					msgLen, err := r.GetRegister(0x13)
 					if err != nil {
@@ -472,7 +493,9 @@ func (r *RFM95W) queueHandler() {
 				txWaiting = txWaiting[len(txWaiting)-MAX_TXQUEUE_PILEUP:]
 			}
 			if r.currentMode != RF95W_MODE_TX { // If we're currently in TX mode, let the current transmission finish.
-				fmt.Printf("queuehandler() starting new transmission.\n")
+				if r.Debug {
+					fmt.Printf("queuehandler() starting new transmission.\n")
+				}
 				// Switch to transmit mode.
 				err := r.sendMessage(txWaiting[0])
 				if err != nil {
@@ -482,7 +505,9 @@ func (r *RFM95W) queueHandler() {
 				}
 			}
 		case <-r.stopQueue:
-			fmt.Printf("queueHandler() received shutdown.\n")
+			if r.Debug {
+				fmt.Printf("queueHandler() received shutdown.\n")
+			}
 			r.SetMode(RF95W_MODE_STDBY)
 			return
 		}
@@ -504,7 +529,9 @@ func (r *RFM95W) Start() {
 	 This is called when we want to change settings.
 */
 func (r *RFM95W) Stop() {
-	fmt.Printf("Stopping queue thread...\n")
+	if r.Debug {
+		fmt.Printf("Stopping queue thread...\n")
+	}
 	r.stopQueue <- 1
 }
 
