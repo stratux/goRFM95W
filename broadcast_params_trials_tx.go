@@ -69,7 +69,7 @@ func main() {
 				fmt.Printf("SendSync() err: %s\n", err.Error())
 			}
 			fmt.Printf("done\n")
-			time.Sleep(100 * time.Millisecond)
+			time.Sleep(150 * time.Millisecond)
 		}
 	}
 }
