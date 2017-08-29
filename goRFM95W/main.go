@@ -36,6 +36,7 @@ type RFM95W struct {
 	mu_Recv       *sync.Mutex
 	RecvBuf       []RFM95W_Message // This is constantly being filled up as messages are received.
 	txQueue       chan []byte
+	mu_Send       *sync.Mutex
 	currentMode   byte
 	stopQueue     chan int
 	// Temp variables for stats.
@@ -100,6 +101,7 @@ func New() (*RFM95W, error) {
 	ret.txQueue = make(chan []byte, 1024)
 	ret.stopQueue = make(chan int)
 	ret.mu_Recv = &sync.Mutex{}
+	ret.mu_Send = &sync.Mutex{}
 
 	time.Sleep(100 * time.Millisecond)
 
@@ -332,7 +334,25 @@ func (r *RFM95W) Send(msg []byte) error {
 	return nil
 }
 
+/*
+	SendSync().
+	 Sends the message. Waits for the queue to be emptied before returning.
+*/
+
+func (r *RFM95W) SendSync(msg []byte) error {
+	err := r.sendMessage(msg)
+	if err == nil {
+		for r.currentMode == RF95W_MODE_TX {
+			time.Sleep(50 * time.Millisecond)
+		}
+	}
+	return err
+}
+
 func (r *RFM95W) sendMessage(msg []byte) error {
+	r.mu_Send.Lock()
+	defer r.mu_Send.Unlock()
+
 	r.SetMode(RF95W_MODE_STDBY)
 
 	rpi.DigitalWrite(RF95W_ACT_PIN, rpi.HIGH) // Turn on ACT LED.
