@@ -17,10 +17,10 @@ const (
 )
 
 type MySituation struct {
-	Lat     float32
-	Lng     float32
-	Alt     float32 // Feet MSL
-	GPSTime time.Time
+	GPSLatitude    float32
+	GPSLongitude   float32
+	GPSAltitudeMSL float32 // Feet MSL
+	GPSTime        time.Time
 }
 
 var Location MySituation

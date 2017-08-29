@@ -17,10 +17,10 @@ const (
 )
 
 type MySituation struct {
-	Lat     float32
-	Lng     float32
-	Alt     float32 // Feet MSL
-	GPSTime time.Time
+	GPSLatitude    float32
+	GPSLongitude   float32
+	GPSAltitudeMSL float32 // Feet MSL
+	GPSTime        time.Time
 }
 
 var Location MySituation
@@ -96,7 +96,7 @@ func main() {
 				msgs := rfm95w.FlushRXBuffer()
 				if len(msgs) > 0 {
 					for _, msg := range msgs {
-						fmt.Printf("%f,%f,%f,%s,%d dBm,%f dB,%0.3f MHz,%0.3f kHz,%d,%d,%d,%s\n", Location.Lat, Location.Lng, Location.Alt, Location.GPSTime, msg.RSSI, msg.SNR, float32(msg.Params.Frequency)/float32(1000000.0), float32(msg.Params.Bandwidth)/float32(1000.0), msg.Params.SpreadingFactor, msg.Params.CodingRate, msg.Params.PreambleLength, msg.Buf)
+						fmt.Printf("%f,%f,%f,%s,%d dBm,%f dB,%0.3f MHz,%0.3f kHz,%d,%d,%d,%s\n", Location.GPSLatitude, Location.GPSLongitude, Location.GPSAltitudeMSL, Location.GPSTime, msg.RSSI, msg.SNR, float32(msg.Params.Frequency)/float32(1000000.0), float32(msg.Params.Bandwidth)/float32(1000.0), msg.Params.SpreadingFactor, msg.Params.CodingRate, msg.Params.PreambleLength, msg.Buf)
 					}
 					// Got a message. Move on to the next parameter.
 					i++
