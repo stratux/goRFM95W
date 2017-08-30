@@ -60,7 +60,16 @@ const (
 	SPI_WRITE_MASK = 0x80
 )
 
-func New() (*RFM95W, error) {
+func New(params *RFM95W_Params) (*RFM95W, error) {
+	if params == nil {
+		params = &RFM95W_Params{
+			Frequency:       RF95W_DEFAULT_FREQ,
+			Bandwidth:       RF95W_DEFAULT_BW,
+			SpreadingFactor: RF95W_DEFAULT_SF,
+			CodingRate:      RF95W_DEFAULT_CR,
+			PreambleLength:  RF95W_DEFAULT_PR,
+		}
+	}
 	// Initialize GPIO library.
 	rpi.WiringPiSetup()
 
@@ -87,15 +96,9 @@ func New() (*RFM95W, error) {
 	SPI.SetCSChange(false)
 
 	ret := &RFM95W{
-		SPI:  SPI,
-		mode: 0, // FIXME.
-		settings: RFM95W_Params{
-			Frequency:       RF95W_DEFAULT_FREQ,
-			Bandwidth:       RF95W_DEFAULT_BW,
-			SpreadingFactor: RF95W_DEFAULT_SF,
-			CodingRate:      RF95W_DEFAULT_CR,
-			PreambleLength:  RF95W_DEFAULT_PR,
-		},
+		SPI:      SPI,
+		mode:     0, // FIXME.
+		settings: *params,
 	}
 
 	// Variables that need initializing.

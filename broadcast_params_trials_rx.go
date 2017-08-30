@@ -71,7 +71,7 @@ func main() {
 	// Start the GPS logging functions in the background.
 	situationMutex = &sync.Mutex{}
 
-	rfm95w, err := goRFM95W.New()
+	rfm95w, err := goRFM95W.New(nil)
 	chkErr(err)
 
 	go situationUpdater() // Keep the GPS location updated.
