@@ -2,6 +2,7 @@ package main
 
 import (
 	"./goRFM95W"
+	"flag"
 	"fmt"
 	"time"
 )
@@ -13,36 +14,27 @@ func main() {
 		return
 	}
 
-	x, err := rfm95w.GetRegister(0x1D)
-	if err != nil {
-		fmt.Printf("error: %s\n", err.Error())
-		return
-	}
-	fmt.Printf("reg 0x1D=%02x\n", x)
-
-	x, err = rfm95w.GetRegister(0x1E)
-	if err != nil {
-		fmt.Printf("error: %s\n", err.Error())
-		return
-	}
-	fmt.Printf("reg 0x1E=%02x\n", x)
-
-	x, err = rfm95w.GetRegister(0x26)
-	if err != nil {
-		fmt.Printf("error: %s\n", err.Error())
-		return
-	}
-	fmt.Printf("reg 0x26=%02x\n", x)
-
 	rfm95w.Start()
 
+	// Generate "test message".
 	buf := make([]byte, 96)
 	for i := 0; i < 96; i++ {
 		buf[i] = byte(i + 33)
 	}
 
+	txMode := flag.Bool("tx", false, "TX a message every ~1sec.")
+	flag.Parse()
+
+	if *txMode {
+		fmt.Printf("TX+RX\n")
+	} else {
+		fmt.Printf("RX only\n")
+	}
+
 	for {
-		rfm95w.Send(buf)
+		if *txMode {
+			rfm95w.Send(buf)
+		}
 		time.Sleep(1 * time.Second)
 		msgs := rfm95w.FlushRXBuffer()
 		if len(msgs) > 0 {
