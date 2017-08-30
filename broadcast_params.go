@@ -10,11 +10,7 @@ const (
 )
 
 var testParams = []goRFM95W.RFM95W_Params{
-	{Frequency: TEST_FREQ, Bandwidth: 15600, SpreadingFactor: 10, CodingRate: 5, PreambleLength: 8},  // -141.5 dBm.
-	{Frequency: TEST_FREQ, Bandwidth: 15600, SpreadingFactor: 9, CodingRate: 5, PreambleLength: 8},   // -138.8 dBm.
-	{Frequency: TEST_FREQ, Bandwidth: 15600, SpreadingFactor: 8, CodingRate: 5, PreambleLength: 8},   // -136.1 dBm.
 	{Frequency: TEST_FREQ, Bandwidth: 62500, SpreadingFactor: 10, CodingRate: 5, PreambleLength: 8},  // -135 dBm.
-	{Frequency: TEST_FREQ, Bandwidth: 15600, SpreadingFactor: 7, CodingRate: 5, PreambleLength: 8},   // -132.2 dBm.
 	{Frequency: TEST_FREQ, Bandwidth: 62500, SpreadingFactor: 9, CodingRate: 5, PreambleLength: 8},   // -132 dBm.
 	{Frequency: TEST_FREQ, Bandwidth: 125000, SpreadingFactor: 10, CodingRate: 5, PreambleLength: 8}, // -132 dBm.
 	{Frequency: TEST_FREQ, Bandwidth: 250000, SpreadingFactor: 11, CodingRate: 5, PreambleLength: 8}, // -131.5 dBm.
@@ -36,11 +32,7 @@ var testParams = []goRFM95W.RFM95W_Params{
 }
 
 var testParamsTXTime = []time.Duration{
-	8209 * time.Millisecond,
-	4432 * time.Millisecond,
-	2462 * time.Millisecond,
 	2053 * time.Millisecond,
-	1395 * time.Millisecond,
 	1108 * time.Millisecond,
 	1027 * time.Millisecond,
 	945 * time.Millisecond,
