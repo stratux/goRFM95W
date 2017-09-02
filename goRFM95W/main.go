@@ -12,6 +12,7 @@ import (
 )
 
 type RFM95W_Params struct {
+	TransmitMode    int
 	Frequency       uint64 // Hz.
 	Bandwidth       int    // Hz.
 	SpreadingFactor int

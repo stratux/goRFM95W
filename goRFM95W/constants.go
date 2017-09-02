@@ -1,6 +1,8 @@
 package goRFM95W
 
 const (
+	RF95W_MODE_FSK          = 0x00
+	RF95W_MODE_OOK          = 0x10
 	RF95W_MODE_LORA         = 0x80
 	RF95W_MODE_SLEEP        = 0x00
 	RF95W_MODE_STDBY        = 0x01
@@ -8,8 +10,8 @@ const (
 	RF95W_MODE_TX           = 0x03
 	RF95W_MODE_FSRX         = 0x04
 	RF95W_MODE_RXCONTINUOUS = 0x05
-	RF95W_MODE_RXSINGLE     = 0x06
-	RF95W_MODE_CAD          = 0x07
+	RF95W_MODE_RXSINGLE     = 0x06 // LoRa specific.
+	RF95W_MODE_CAD          = 0x07 // LoRa specific.
 
 	RF95W_FREQ_STEP = 32000000.0 / 524288.0 // 32 MHz oscillator, 2^19 bits. ~61 Hz.
 
