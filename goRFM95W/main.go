@@ -116,7 +116,7 @@ func New(params *RFM95W_Params) (*RFM95W, error) {
 }
 
 func (r *RFM95W) SetMode(mode byte) error {
-	_, err := r.SetRegister(0x01, mode)
+	_, err := r.SetRegister(0x01, mode) // RegOpMode.
 	if err == nil {
 		r.currentMode = mode
 	}
@@ -124,7 +124,7 @@ func (r *RFM95W) SetMode(mode byte) error {
 }
 
 func (r *RFM95W) GetMode() (byte, error) {
-	ret, err := r.GetRegister(0x01)
+	ret, err := r.GetRegister(0x01) // RegOpMode.
 	if err == nil {
 		r.currentMode = ret
 	}
@@ -197,8 +197,8 @@ func (r *RFM95W) init() error {
 	}
 
 	// Set base addresses of the FIFO buffer in both TX and RX cases to zero.
-	r.SetRegister(0x0E, 0x00)
-	r.SetRegister(0x0F, 0x00)
+	r.SetRegister(0x0E, 0x00) // RegFifoTxBaseAddr.
+	r.SetRegister(0x0F, 0x00) // RegFifoRxBaseAddr.
 
 	// Set module to STDBY mode.
 	r.SetMode(RF95W_MODE_STDBY)
@@ -221,7 +221,7 @@ func (r *RFM95W) SetBandwidth(bw int) error {
 		return errors.New("Invalid bandwidth requested.")
 	}
 	// Get initial value.
-	val, err := r.GetRegister(0x1D)
+	val, err := r.GetRegister(0x1D) // RegModemConfig1.
 	if err != nil {
 		return err
 	}
@@ -230,7 +230,7 @@ func (r *RFM95W) SetBandwidth(bw int) error {
 	if r.Debug {
 		fmt.Printf("SetBandwidth(): %02x -> %02x\n", val, new_val)
 	}
-	_, err = r.SetRegister(0x1D, new_val)
+	_, err = r.SetRegister(0x1D, new_val) // RegModemConfig1.
 	if err != nil {
 		r.settings.Bandwidth = bw
 	}
@@ -248,7 +248,7 @@ func (r *RFM95W) SetCodingRate(cr int) error {
 	}
 	b := byte(cr - 4) // 5 = 0x1, 6 = 0x2, 7 = 0x3, 8 = 0x4
 	// Get initial value.
-	val, err := r.GetRegister(0x1D)
+	val, err := r.GetRegister(0x1D) // RegModemConfig1.
 	if err != nil {
 		return err
 	}
@@ -257,7 +257,7 @@ func (r *RFM95W) SetCodingRate(cr int) error {
 	if r.Debug {
 		fmt.Printf("SetCodingRate(): %02x -> %02x\n", val, new_val)
 	}
-	_, err = r.SetRegister(0x1D, new_val)
+	_, err = r.SetRegister(0x1D, new_val) // RegModemConfig1.
 	if err != nil {
 		r.settings.CodingRate = cr
 	}
@@ -272,7 +272,7 @@ func (r *RFM95W) SetCodingRate(cr int) error {
 
 func (r *RFM95W) SetExplicitHeaderMode(wantHeader bool) error {
 	// Get initial value.
-	val, err := r.GetRegister(0x1D)
+	val, err := r.GetRegister(0x1D) // RegModemConfig1.
 	if err != nil {
 		return err
 	}
@@ -285,7 +285,7 @@ func (r *RFM95W) SetExplicitHeaderMode(wantHeader bool) error {
 	if r.Debug {
 		fmt.Printf("SetExplicitHeaderMode(): %02x -> %02x\n", val, new_val)
 	}
-	_, err = r.SetRegister(0x1D, new_val)
+	_, err = r.SetRegister(0x1D, new_val) // RegModemConfig1.
 	return err
 }
 
@@ -303,7 +303,7 @@ func (r *RFM95W) SetSpreadingFactor(sf int) error {
 	}
 	b := byte(sf)
 	// Get initial value.
-	val, err := r.GetRegister(0x1E)
+	val, err := r.GetRegister(0x1E) // RegModemConfig2.
 	if err != nil {
 		return err
 	}
@@ -312,7 +312,7 @@ func (r *RFM95W) SetSpreadingFactor(sf int) error {
 	if r.Debug {
 		fmt.Printf("SetSpreadingFactor(): %02x -> %02x\n", val, new_val)
 	}
-	_, err = r.SetRegister(0x1E, new_val)
+	_, err = r.SetRegister(0x1E, new_val) // RegModemConfig2.
 	if err != nil {
 		r.settings.SpreadingFactor = sf
 	}
@@ -328,8 +328,8 @@ func (r *RFM95W) SetPreambleLength(pr int) error {
 	if pr < 6 {
 		return errors.New("Invalid preamble length requested.")
 	}
-	r.SetRegister(0x20, byte(pr>>8))
-	_, err := r.SetRegister(0x21, byte(pr&0xFF))
+	r.SetRegister(0x20, byte(pr>>8))             // RegPreambleMsb.
+	_, err := r.SetRegister(0x21, byte(pr&0xFF)) // RegPreambleLsb.
 	if err != nil {
 		r.settings.PreambleLength = pr
 	}
@@ -338,9 +338,9 @@ func (r *RFM95W) SetPreambleLength(pr int) error {
 
 func (r *RFM95W) SetFrequency(freq uint64) error {
 	steps := uint32(float64(freq) / RF95W_FREQ_STEP)
-	r.SetRegister(0x06, byte(steps>>16))
-	r.SetRegister(0x07, byte((steps>>8)&0xFF))
-	_, err := r.SetRegister(0x08, byte(steps&0xFF))
+	r.SetRegister(0x06, byte(steps>>16))            // RegFrMsb.
+	r.SetRegister(0x07, byte((steps>>8)&0xFF))      // RegFrMid.
+	_, err := r.SetRegister(0x08, byte(steps&0xFF)) // RegFrLsb.
 	if err != nil {
 		r.settings.Frequency = freq
 	}
@@ -352,7 +352,7 @@ func (r *RFM95W) SetFrequency(freq uint64) error {
 //FIXME:	 Always run at 17 dBm for now.
 */
 func (r *RFM95W) SetTXPower() error {
-	_, err := r.SetRegister(0x09, 0x8F)
+	_, err := r.SetRegister(0x09, 0x8F) // RegPaConfig.
 	return err
 }
 
@@ -394,19 +394,19 @@ func (r *RFM95W) sendMessage(msg []byte) error {
 	rpi.DigitalWrite(RF95W_ACT_PIN, rpi.HIGH) // Turn on ACT LED.
 
 	// Set the FIFO address pointer to the start.
-	_, err := r.SetRegister(0x0D, 0x00)
+	_, err := r.SetRegister(0x0D, 0x00) // RegFifoAddrPtr.
 	if err != nil {
 		return err
 	}
 
 	// Write the message into the FIFO buffer.
-	_, err = r.SetBytes(0x00, msg)
+	_, err = r.SetBytes(0x00, msg) // RegFifo.
 	if err != nil {
 		return err
 	}
 
 	// Set the message payload length register.
-	_, err = r.SetRegister(0x22, byte(len(msg)))
+	_, err = r.SetRegister(0x22, byte(len(msg))) // PayloadLength.
 	if err != nil {
 		return err
 	}
@@ -429,8 +429,8 @@ func (r *RFM95W) setRXMode() error {
 		return err
 	}
 
-	//Change DIOx interrupt mapping so that DIO0 interrupts on RxDone.
-	_, err = r.SetRegister(0x40, 0x00)
+	// Change DIOx interrupt mapping so that DIO0 interrupts on RxDone.
+	_, err = r.SetRegister(0x40, 0x00) // RegFifo.
 	if err != nil {
 		return err
 	}
@@ -459,7 +459,7 @@ func (r *RFM95W) queueHandler() {
 		select {
 		case <-r.interruptChan:
 			// Get the IRQ flags.
-			irqFlags, _ := r.GetRegister(0x12)
+			irqFlags, _ := r.GetRegister(0x12) // RegIrqFlags.
 			if r.Debug {
 				fmt.Printf("queueHandler() interrupt received, currentMode=%02x, irqFlags=%02x\n", r.currentMode, irqFlags)
 			}
@@ -503,32 +503,32 @@ func (r *RFM95W) queueHandler() {
 						fmt.Printf("queueHandler() received RXDONE.\n")
 					}
 					// Get the total length of the packet.
-					msgLen, err := r.GetRegister(0x13)
+					msgLen, err := r.GetRegister(0x13) // FifoRxNbBytes.
 					if err != nil {
 						fmt.Printf("queueHandler() fatal error receiving packet, can't get length: %s\n", err.Error())
 						continue
 					}
 					// Get the start address in the FIFO queue.
-					fifoPtr, err := r.GetRegister(0x10)
+					fifoPtr, err := r.GetRegister(0x10) // RegFifoRxCurrentAddr.
 					if err != nil {
 						fmt.Printf("queueHandler() fatal error receiving packet, can't get start pointer address: %s\n", err.Error())
 						continue
 					}
 					// Set the read address to the start of the message in the FIFO queue.
-					_, err = r.SetRegister(0x0D, fifoPtr)
+					_, err = r.SetRegister(0x0D, fifoPtr) // RegFifoAddrPtr.
 					if err != nil {
 						fmt.Printf("queueHandler() fatal error receiving packet, can't set FIFO pointer: %s\n", err.Error())
 						continue
 					}
 					// Read the data.
-					msgBuf, err := r.GetBytes(0x00, int(msgLen))
+					msgBuf, err := r.GetBytes(0x00, int(msgLen)) // RegFifo.
 					if err != nil {
 						fmt.Printf("queueHandler() fatal error receiving packet, can't read FIFO buffer: %s\n", err.Error())
 						continue
 					}
 					// Get some extra stats - SNR, RSSI, etc.
-					snrByte, _ := r.GetRegister(0x19)
-					rssiByte, _ := r.GetRegister(0x1A)
+					snrByte, _ := r.GetRegister(0x19)  // RegPktSnrValue.
+					rssiByte, _ := r.GetRegister(0x1A) // RegPktRssiValue.
 					//FIXME: Converting snr should be easier.
 					rdr := bytes.NewReader([]byte{snrByte})
 					var snr int8
@@ -545,7 +545,7 @@ func (r *RFM95W) queueHandler() {
 				}
 			}
 			// Clear the IRQ flags.
-			r.SetRegister(0x12, 0xFF)
+			r.SetRegister(0x12, 0xFF) // RegIrqFlags.
 		case msg := <-r.txQueue:
 			txWaiting = append(txWaiting, msg) // txWaiting is a FIFO queue.
 			if len(txWaiting) > MAX_TXQUEUE_PILEUP {
