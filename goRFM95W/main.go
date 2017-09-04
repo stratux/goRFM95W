@@ -555,9 +555,6 @@ func (r *RFM95W) queueHandler() {
 					r.RecvBuf = append(r.RecvBuf, newMessage)
 					r.mu_Recv.Unlock()
 
-					// Reset the FIFO RX buffer base address.
-					//FIXME: Is this necessary?
-					r.SetRegister(0x0F, 0x00) // RegFifoRxBaseAddr.
 				}
 			}
 			// Clear the IRQ flags.
