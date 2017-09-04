@@ -205,9 +205,21 @@ func (r *RFM95W) init() error {
 
 	r.setParams(r.settings)
 
+	r.setLNASettings()
+
 	r.SetTXPower()
 
 	return nil
+}
+
+/*
+	setLNASettings().
+	 Sets the LNA gain and boost values.
+*/
+func (r *RFM95W) setLNASettings() {
+	// G1 = maximum gain. LnaBoostHf on.
+	r.SetRegister(0x0C, 0x23) // RegLna.
+	//FIXME: See RegModemConfig3. AgcAutoOn.
 }
 
 /*
