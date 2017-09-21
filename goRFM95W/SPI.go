@@ -1,3 +1,5 @@
+// SPI specific functions.
+
 package goRFM95W
 
 import (

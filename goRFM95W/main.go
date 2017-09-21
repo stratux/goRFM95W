@@ -15,9 +15,10 @@ type RFM95W_Params struct {
 	TransmitMode    int
 	Frequency       uint64 // Hz.
 	Bandwidth       int    // Hz.
-	SpreadingFactor int
-	CodingRate      int
-	PreambleLength  int
+	SpreadingFactor int    // LoRa specific.
+	CodingRate      int    // LoRa specific.
+	PreambleLength  int    // LoRa specific.
+	DataRate        int    // FSK specific.
 }
 
 type RFM95W_Message struct {
@@ -63,7 +64,9 @@ const (
 
 func New(params *RFM95W_Params) (*RFM95W, error) {
 	if params == nil {
+		// Default parameters.
 		params = &RFM95W_Params{
+			TransmitMode:    RFM95_MODE_LORA,
 			Frequency:       RF95W_DEFAULT_FREQ,
 			Bandwidth:       RF95W_DEFAULT_BW,
 			SpreadingFactor: RF95W_DEFAULT_SF,
@@ -143,13 +146,11 @@ func (r *RFM95W) Close() {
 }
 
 func (r *RFM95W) setParams(param RFM95W_Params) {
-
 	r.SetBandwidth(param.Bandwidth)
 	r.SetSpreadingFactor(param.SpreadingFactor)
 	r.SetCodingRate(param.CodingRate)
 	r.SetPreambleLength(param.PreambleLength)
 	r.SetFrequency(param.Frequency)
-
 }
 
 func (r *RFM95W) SetParams(param RFM95W_Params) error {
