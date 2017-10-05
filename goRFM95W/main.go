@@ -154,9 +154,11 @@ func (r *RFM95W) setParams(param RFM95W_Params) {
 }
 
 func (r *RFM95W) SetParams(param RFM95W_Params) error {
-	if r.currentMode != RF95W_MODE_SLEEP && r.currentMode != RF95W_MODE_STDBY {
+	if r.currentMode == RF95W_MODE_TX {
 		return errors.New("SetParams(): Not ready.")
 	}
+
+	r.SetMode(RF95W_MODE_STDBY)
 
 	r.settings = param
 	err := r.init()
